@@ -8,25 +8,27 @@
 	<link rel="stylesheet" href="style.css">
 </head>
 
-<body onload="ChangeVideo()">
+<body>
 	<h1 id="texteVid">SALUT A TOUS</h1>
-	<video muted id="video" src="https://cdn.discordapp.com/attachments/1076908168132694048/1077597865058242600/srdfgsdehuderhj.mp4">
+	<video muted id="video" width="1920" height="1080">
 	</video>
 	<input id="btnMute" type="button" value="Unmute">
 	<script>
+	(function() {
+		const DEFAULT_VIDEO_URL = "https://cdn.discordapp.com/attachments/1076908168132694048/1077597865058242600/srdfgsdehuderhj.mp4";
 		const video = document.getElementById("video");
-		var btn = document.querySelector('input');
-		var texteVideo = "";
-		var time = 20000;
-		var height = 1080;
-		var width = 1920;
-		var urlRecu = "https://cdn.discordapp.com/attachments/1076908168132694048/1077597865058242600/srdfgsdehuderhj.mp4";
-		
+		const btn = document.getElementById("btnMute");
+		let texteVideo = "";
+		let time = 20000;
+		let width = 1920;
+		let height = 1080;
+		let urlRecu = DEFAULT_VIDEO_URL;
+
 		function Database() {
-			var ajax = new XMLHttpRequest();
-			var method = "GET";
-			var url = "getValue.php";
-			var asynchronous = true;
+			let ajax = new XMLHttpRequest();
+			let method = "GET";
+			let url = "getValue.php";
+			let asynchronous = true;
 
 			ajax.open(method, url, asynchronous);
 			ajax.send();
@@ -34,39 +36,39 @@
 				let messageRecu = this.responseText.split("$");
 				if (messageRecu[3] != urlRecu) {
 					time = messageRecu[0];
-					setTimeout(
-						function() {
-							Clear();
-						}, time);
-				width = messageRecu[1];
-				video.width = width;
-				height = messageRecu[2];
-				video.height = height;
-				urlRecu = messageRecu[3];
-					video.src = "" + urlRecu;
+					setTimeout(Clear, time);
+
+					width = messageRecu[1];
+					video.width = width;
+
+					height = messageRecu[2];
+					video.height = height;
+
+					urlRecu = messageRecu[3];
+					video.src = urlRecu || DEFAULT_VIDEO_URL;
 					video.load();
 					video.play();
 
-					setTimeout(
-						function() {
-							document.getElementById("btnMute").style.display = "block";
-							clickButton();
-						}, 1000);
+					setTimeout(function() {
+						btn.style.display = "block";
+						clickButton();
+					}, 1000);
+
 					texteVideo = messageRecu[4];
 					document.getElementById("texteVid").textContent = texteVideo;
 				}
-			}
+			};
 		}
 
 		function Clear() {
 			console.log("clear");
 			video.src = "";
 			document.getElementById("texteVid").textContent = "";
-			document.getElementById("btnMute").style.display = "none";
+			btn.style.display = "none";
 		}
 
 		btn.addEventListener("click", function() {
-			document.getElementById("btnMute").style.display = "none";
+			btn.style.display = "none";
 			video.muted = !video.muted;
 			video.volume = 0.1;
 			video.play();
@@ -77,13 +79,13 @@
 			btn.click();
 		}
 
-
 		function ChangeVideo() {
-
-			const interval = setInterval(function() {
-				Database();
-			}, 7000); //Délai de scrutation pour chaque video
+			const intervalDuration = 7000; // Délai de scrutation pour chaque vidéo
+			const interval = setInterval(Database, intervalDuration);
 		}
+
+		ChangeVideo(); // Démarrer le changement de vidéo immédiatement
+	})();
 	</script>
 </body>
 

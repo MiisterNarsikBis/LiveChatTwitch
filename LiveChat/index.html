@@ -8,34 +8,33 @@
 	<title>LiveChat Image - Zefren</title>
 </head>
 
-<body onload="ChangeImage()">
+<body>
 	<h1 id="texteIm">SALUT A TOUS</h1>
-	<img id="message" width="1920" height="1080" src=" https://cdn.discordapp.com/attachments/1076908168132694048/1077592007175831562/vide.png">
+	<img id="message" width="1920" height="1080" src="https://cdn.discordapp.com/attachments/1076908168132694048/1077592007175831562/vide.png">
 	<script>
-		var texteImage = "";
-		var time = 20000;
-		var width = 1920;
-		var height = 1080;
+	(function() {
+		const EMPTY_IMAGE_URL = "https://cdn.discordapp.com/attachments/1076908168132694048/1077592007175831562/vide.png";
+		let texteImage = "";
+		let time = 20000;
+		let width = 1920;
+		let height = 1080;
 		const img = document.getElementById("message");
-		var urlRecu = "https://cdn.discordapp.com/attachments/1076908168132694048/1077592007175831562/vide.png";
+		let urlRecu = EMPTY_IMAGE_URL;
 
 		function Database() {
-			var ajax = new XMLHttpRequest();
-			var method = "GET";
-			var url = "getValue.php";
-			var asynchronous = true;
+			let ajax = new XMLHttpRequest();
+			let method = "GET";
+			let url = "getValue.php";
+			let asynchronous = true;
 
 			ajax.open(method, url, asynchronous);
 			ajax.send();
 			ajax.onload = function() {
 				let messageRecu = this.responseText.split("$");
-				console.log("message:",messageRecu);
+				console.log("message:", messageRecu);
 				if (messageRecu[0] != time) {
 					time = messageRecu[0];
-					setTimeout(
-						function() {
-							Clear();
-						}, time);
+					setTimeout(Clear, time);
 				}
 
 				if (messageRecu[1] != width) {
@@ -50,19 +49,19 @@
 
 				if (messageRecu[3] != urlRecu) {
 					urlRecu = messageRecu[3];
-					img.src = "" + urlRecu;
+					img.src = urlRecu || EMPTY_IMAGE_URL;
 				}
-				
+
 				if (messageRecu[4] != texteImage) {
 					texteImage = messageRecu[4];
 					document.getElementById("texteIm").textContent = texteImage;
 				}
-			}//FIN FONCTION AJAX
+			}; //FIN FONCTION AJAX
 		}
 
 		function Clear() {
 			console.log("clear");
-			img.src = "https://cdn.discordapp.com/attachments/1076908168132694048/1077592007175831562/vide.png";
+			img.src = EMPTY_IMAGE_URL;
 			img.width = 1920;
 			img.height = 1080;
 			document.getElementById("texteIm").textContent = "";
@@ -70,11 +69,12 @@
 		}
 
 		function ChangeImage() {
-
-			const interval = setInterval(function() {
-				Database();
-			}, 7000);
+			const intervalDuration = 7000;
+			const interval = setInterval(Database, intervalDuration);
 		}
+
+		ChangeImage(); // Démarrer le changement d'image immédiatement
+	})();
 	</script>
 </body>
 

@@ -1,19 +1,52 @@
 const { Client, GatewayIntentBits } = require("discord.js");
 const { createConnection } = require("mysql");
 
-//LISTE DES COMMANDES A ECRIRE SUR DISCORD
-const prefixImage = "!image";
-const prefixVideo = "!video";
-const prefixFullScreen = "!fullscreen";
-const prefixStop = "!stop";
-const prefixHelp = "!help";
+// Constantes pour les préfixes
+const PREFIX_IMAGE = "!image";
+const PREFIX_VIDEO = "!video";
+const PREFIX_FULLSCREEN = "!fullscreen";
+const PREFIX_STOP = "!stop";
+const PREFIX_HELP = "!help";
 
-const idChannelDiscord = "0003424000023312123"; //Remplacez par l'id de votre channel Discord
-const TOKEN = "QZOIJSQ8fd394jdsdSE934.3424DSoze.324dsEROP.23REkdf"; //Remplacez par le Token de votre bot discord
+// Autres constantes
+const ID_CHANNEL_DISCORD = "0003424000023312123"; // Remplacez par l'id de votre channel Discord
+const TOKEN = "QZOIJSQ8fd394jdsdSE934.3424DSoze.324dsEROP.23REkdf"; // Remplacez par le Token de votre bot discord
 
 //L'id discord et le token sont de fausses valeurs, ça ne fonctionnera pas en l'état
 
 var isFullscreen = false; //Par défaut, l'envoi des images correspond à la taille définie de l'image
+
+/*
+ * Permet d'effectuer la connexion vers la base de donnée
+ *
+ * host: SERVEUR QUI HEBERGE LE SITE/BDD par exemple alwaysdata : mysql-username.alwaysdata.net
+ * port: Le port d'écoute, à ne pas modifier
+ * user: Utilisateur pour se connecter à votre bdd (doit avoir les accès admin)
+ * password: Mot de passe du compte bdd
+ * database: Nom de la base de donnée
+ * charset: Encodage, à ne pas modifier
+ * Fonction de connexion à la base de données
+ */
+function connectToDatabase() {
+  const con = createConnection({
+    host: "localhost", // A remplacer par le vôtre
+    port: "3306",
+    user: "root", // A remplacer par le vôtre
+    password: "", // A remplacer par le vôtre
+    database: "livechat_test", // A remplacer par le vôtre
+    charset: "utf8mb4",
+  });
+
+  con.connect((err) => {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("Connexion à la base de données établie !");
+    }
+  });
+
+  return con;
+}
 
 /*
  * Client discord
@@ -26,28 +59,10 @@ const client = new Client({
   ],
 });
 
-/*
- * Permet d'effectuer la connexion vers la base de donnée
- *
- * host: SERVEUR QUI HEBERGE LE SITE/BDD par exemple alwaysdata : mysql-username.alwaysdata.net
- * port: Le port d'écoute, à ne pas modifier
- * user: Utilisateur pour se connecter à votre bdd (doit avoir les accès admin)
- * password: Mot de passe du compte bdd
- * database: Nom de la base de donnée
- * charset: Encodage, à ne pas modifier
- */
-let con = createConnection({
-  host: "localhost", //A remplacer par le votre
-  port: "3306",
-  user: "root", //A remplacer par le votre
-  password: "", //A remplacer par le votre
-  database: "livechat_test", //A remplacer par le votre
-  charset: "utf8mb4",
-});
 
 //Lancement du bot Discord
 client.on("ready", () => {
-  client.channels.fetch(idChannelDiscord).then((channel) => {
+  client.channels.fetch(ID_CHANNEL_DISCORD).then((channel) => {
     channel.send(
       "Je suis prêt, vous pouvez envoyez des images / vidéos. !help"
     );
@@ -58,16 +73,22 @@ client.on("ready", () => {
 //Le bot est mis sur écoute
 client.on("messageCreate", (message) => {
   //On décompose le message reçu
-  let myMessage = message.content.split(" ");
+  const myMessage = message.content.split(" ");
+
+  // Vérification des préfixes valides
+  function isPrefixValid(prefix) {
+    return (
+      myMessage[0] === prefix &&
+      message.channel.id === ID_CHANNEL_DISCORD
+    );
+  }
+
 
   //On vérifie qu'il s'agit d'une commande
+  // Vérification si c'est une commande
   if (
-    (isPrefixValid(myMessage[0]) &&
-      message.channel.id === idChannelDiscord &&
-      message.attachments.size <= 0 &&
-      myMessage[1]?.length <= 0) ||
-    (isPrefixValid(myMessage[0]) &&
-      message.channel.id === idChannelDiscord &&
+    (isPrefixValid(PREFIX_IMAGE) && message.attachments.size <= 0 && myMessage[1]?.length <= 0) ||
+    (isPrefixValid(PREFIX_IMAGE) &&
       message.attachments.size > 0 &&
       myMessage[1]?.match("/^d+$/") &&
       myMessage[1]?.length <= 3)
@@ -75,68 +96,59 @@ client.on("messageCreate", (message) => {
     console.log("Vérifiez la commande");
     message.channel.send(
       "Erreur dans la commande <@" +
-        `${message.author.id}` +
-        "> !help pour plus d'informations"
+      `${message.author.id}` +
+      "> !help pour plus d'informations"
     );
   } else {
     //Si le message reçu correspond à l'une des commandes alors on vérifie de quelle commande il s'agit
-    if (
-      myMessage[0] === prefixImage &&
-      message.channel.id === idChannelDiscord
-    ) {
-      //Si c'est une image
-      let height = message.attachments.first().height;
+    if (isPrefixValid(PREFIX_IMAGE)) {
+      // Si c'est une image
       let width = message.attachments.first().width;
+      let height = message.attachments.first().height;
 
-      //Si la condition fullscreen est active
+      // Si la condition fullscreen est active
       if (isFullscreen === true) {
         width = 1920;
         height = 1080;
       }
+
       let image = message.attachments.first().url;
       let time = myMessage[1] * 1000;
       let texte = message.content.substring(
-        myMessage[0].length + myMessage[1].length + 2,
+        myMessage[0].length + myMessage[1]?.length + 2,
         message.content.length
       );
+
       if (message.attachments.first().contentType.startsWith("image")) {
-        con.connect((err) => {
-          //En cas d'erreur
-          if (err) {
-            return console.log(err);
-          }
-
-          //Si il n'y a aucune erreur
-          console.log(`Connexion à la BDD!`);
-        });
-
+        const con = connectToDatabase();
         //UPDATE de notre BDD TABLE Image
-        con.query(`UPDATE image SET url='${image}' WHERE 1`);
-        con.query(`UPDATE image SET ImageTime='${time}' WHERE 1`);
-        con.query(`UPDATE image SET ImageTexte='${texte}' WHERE 1`);
-        con.query(`UPDATE image SET Width='${width}' WHERE 1`);
-        con.query(`UPDATE image SET Height='${height}' WHERE 1`);
+        con.query(`UPDATE image SET url='${image}', ImageTime='${time}', ImageTexte='${texte}', Width='${width}', Height='${height}' WHERE 1`, (err, result) => {
+          if (err) {
+            console.log(err);
+          } else {
+            console.log("L'image a été mise à jour dans la base de données !");
+          }
+        });
+        con.end();
 
         message.channel.send(
           "L'image a été envoyée <@" + `${message.author.id}` + ">"
         );
-      } //FIN CONDITION IMAGE
+      }
     }
 
-    if (
-      myMessage[0] === prefixVideo &&
-      message.channel.id === idChannelDiscord
-    ) {
-      //Si c'est une vidéo
-      let video = message.attachments.first().url;
+    if (isPrefixValid(PREFIX_VIDEO)) {
+      // Si c'est une vidéo
       let width = message.attachments.first().width;
       let height = message.attachments.first().height;
 
-      //Si la condition fullscreen est active
+      // Si la condition fullscreen est active
       if (isFullscreen === true) {
         width = 1920;
         height = 1080;
       }
+
+      let video = message.attachments.first().url;
       let time = myMessage[1] * 1000;
       let texte = message.content.substring(
         myMessage[0]?.length + myMessage[1]?.length + 2,
@@ -144,61 +156,52 @@ client.on("messageCreate", (message) => {
       );
 
       if (message.attachments.first().contentType.startsWith("video")) {
-        con.connect((err) => {
-          //En cas d'erreur
-          if (err) {
-            return console.log(err);
-          }
-          //Si il n'y a pas d'erreur
-          console.log(`Connexion à la BDD!`);
-        });
-
+        const con = connectToDatabase();
         //UPDATE de notre BDD TABLE Video
-        con.query(`UPDATE video SET VideoURL='${video}' WHERE 1`);
-        con.query(`UPDATE video SET VideoTime='${time}' WHERE 1`);
-        con.query(`UPDATE video SET VideoTexte='${texte}' WHERE 1`);
-        con.query(`UPDATE video SET Width='${width}' WHERE 1`);
-        con.query(`UPDATE video SET Height='${height}' WHERE 1`);
+        con.query(`UPDATE video SET VideoURL='${video}', VideoTime='${time}', VideoTexte='${texte}', Width='${width}', Height='${height}' WHERE 1`, (err, result) => {
+          if (err) {
+            console.log(err);
+          } else {
+            console.log("La vidéo a été mise à jour dans la base de données !");
+          }
+        });
+        con.end();
+
         message.channel.send(
           "La vidéo a été envoyée <@" + `${message.author.id}` + ">"
-        ); //FIN UPDATE
+        );
       }
     }
   }
 
-  if (myMessage[0] === prefixStop && message.channel.id === idChannelDiscord) {
-    con.connect((err) => {
-      //en cas d'erreur
-      if (err) {
-        return console.log(err);
-      }
-      //Si il n'y a pas d'erreur
-      console.log(`Connexion à la BDD!`);
-    });
-
+  if (isPrefixValid(PREFIX_STOP)) {
+    const con = connectToDatabase();
     //UPDATE de notre BDD TABLE Video
-    con.query(`UPDATE video SET VideoURL = '${""}' WHERE 1`);
-    con.query(`UPDATE video SET VideoTexte = '${" "}' WHERE 1`);
-
+    con.query(`UPDATE video SET VideoURL = '${""}', VideoTexte = '${" "}' WHERE 1`);
     //UPDATE de notre BDD TABLE Image
-    con.query(`UPDATE image SET url = '${""}' WHERE 1`);
-    con.query(`UPDATE image SET ImageTexte = '${" "}' WHERE 1`);
+    con.query(`UPDATE image SET url = '${""}', ImageTexte = '${" "}' WHERE 1`, (err, result) => {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log("Le stop a fonctionné !");
+      }
+    });
+    con.end();
+
     message.channel.send(
       "Le stop a fonctionné <@" + `${message.author.id}` + ">"
     );
   }
-  if (myMessage[0] === prefixHelp && message.channel.id === idChannelDiscord) {
+
+  if (isPrefixValid(PREFIX_HELP)) {
     message.channel.send(
       "<@" +
-        `${message.author.id}` +
-        "> Un message doit contenir obligatoirement une image ou une vidéo. La commande doit commencer par !image ou !video suivit d'un nombre qui représente le temps en secondes que l'image ou la vidéo va apparaître.\n !stop pour réinitialiser l'image / vidéo \n !fullscreen pour activer / desactiver l'affiche image plein écran \nPour plus d'exemple rendez-vous sur : <https://github.com/Nerfez/LiveChatTwitch>"
+      `${message.author.id}` +
+      "> Un message doit contenir obligatoirement une image ou une vidéo. La commande doit commencer par !image ou !video suivit d'un nombre qui représente le temps en secondes que l'image ou la vidéo va apparaître.\n !stop pour réinitialiser l'image / vidéo \n !fullscreen pour activer / désactiver l'affiche image plein écran \nPour plus d'exemple rendez-vous sur : <https://github.com/Nerfez/LiveChatTwitch>"
     );
   }
 
-  if (
-    myMessage[0] === prefixFullScreen &&
-    message.channel.id === idChannelDiscord
-  ) {
+  if (isPrefixValid(PREFIX_FULLSCREEN)) {
     if (isFullscreen === false) {
       message.channel.send(
         "<@" +
@@ -216,29 +219,6 @@ client.on("messageCreate", (message) => {
     }
   }
 });
-
-/*
- * Permet de vérifier si le message entré dans le channel discord commence par l'une de nos commandes
- *
- * @param message Le message reçu sur le channel discord
- * @return True si le message commence par une commande
- */
-function isPrefixValid(message) {
-  switch (message) {
-    case prefixImage:
-      return true;
-    case prefixVideo:
-      return true;
-    case prefixHelp:
-      return true;
-    case prefixStop:
-      return true;
-    case prefixFullScreen:
-      return true;
-    default:
-      return false;
-  }
-}
 
 /*
  * Connexion du bot discord grâce au Token
